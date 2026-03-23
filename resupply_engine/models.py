@@ -14,10 +14,14 @@ class VitalSigns(BaseModel):
     """Structured vital signs captured for a single patient case."""
 
     gcs: int | None = None
+    gcs_eye: int | None = None
+    gcs_verbal: int | None = None
+    gcs_motor: int | None = None
     heart_rate: int | None = None
     respiratory_rate: int | None = None
     spo2: int | None = None
     systolic_bp: int | None = None
+    diastolic_bp: int | None = None
     temperature_c: float | None = None
 
 
@@ -30,17 +34,73 @@ class SourceMetadata(BaseModel):
     source_message_type: str | None = None
 
 
-class BurstPayload(BaseModel):
-    """Raw inbound medic burst message before the app normalizes it."""
+class IncomingVitals(BaseModel):
+    """Vitals as transmitted in the external TBI burst payload."""
+
+    blood_pressure_systolic: int | None = None
+    blood_pressure_diastolic: int | None = None
+    heart_rate_bpm: int | None = None
+    respiratory_rate_rpm: int | None = None
+    spo2_pct: int | None = None
+    temperature_f: float | None = None
+
+
+class IncomingNeuroExam(BaseModel):
+    """Structured neuro exam fields sent by the upstream assessment system."""
+
+    gcs_total: int | None = None
+    gcs_eye: int | None = None
+    gcs_verbal: int | None = None
+    gcs_motor: int | None = None
+    loc_duration: Literal["NONE", "<30MIN", ">30MIN"] | None = None
+    pupil_response: Literal["NORMAL", "UNEQUAL", "NON_REACTIVE"] | None = None
+    vomiting: bool | None = None
+    seizure: bool | None = None
+    suspected_icp: Literal["YES", "NO", "UNKNOWN"] | None = None
+
+    @field_validator("loc_duration", "pupil_response", "suspected_icp", mode="before")
+    @classmethod
+    def normalize_enum_fields(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().upper()
+        if normalized == "NONE":
+            return "NONE"
+        if normalized == "<30MIN":
+            return "<30MIN"
+        if normalized == ">30MIN":
+            return ">30MIN"
+        if normalized == "NON-REACTIVE":
+            return "NON_REACTIVE"
+        return normalized.replace(" ", "_")
+
+
+class IncomingInjury(BaseModel):
+    """Injury characterization fields sent in the external burst payload."""
+
+    mechanism: str | None = None
+    tbi_severity: Literal["MILD", "MODERATE", "SEVERE", "PENETRATING"]
+
+
+class TbiBurstPayload(BaseModel):
+    """Raw inbound TBI burst message before the app normalizes it."""
 
     burst_id: str
     patient_id: str
     case_id: str
+    mission_id: str
     medic_id: str
-    occurred_at: datetime = Field(default_factory=utc_now)
+    timestamp_utc: datetime
+    time_since_injury_min: int
+    casualty_count: int
+    priority_flag: str
+    vitals: IncomingVitals = Field(default_factory=IncomingVitals)
+    neuro_exam: IncomingNeuroExam | None = None
+    injury: IncomingInjury
+    airway_status: str | None = None
+    treatment_given: list[str] = Field(default_factory=list)
+    requested_supplies: list[str] = Field(default_factory=list)
     evacuation_eta_hours: int | None = None
-    symptoms: list[str] = Field(default_factory=list)
-    vitals: VitalSigns = Field(default_factory=VitalSigns)
     risk_score: float | None = None
     notes: str | None = None
     source: SourceMetadata = Field(default_factory=SourceMetadata)
@@ -52,7 +112,7 @@ class PlanningRequest(BaseModel):
 
     shootdown_rate: int
     target_arrival_probability: float = 0.95
-    payload: BurstPayload
+    payload: TbiBurstPayload
 
     @field_validator("target_arrival_probability")
     @classmethod
@@ -68,8 +128,15 @@ class CanonicalCase(BaseModel):
     burst_id: str
     patient_id: str
     case_id: str
+    mission_id: str
     medic_id: str
     occurred_at: datetime
+    time_since_injury_min: int
+    casualty_count: int
+    priority_flag: str
+    airway_status: str | None = None
+    treatment_given: list[str] = Field(default_factory=list)
+    requested_supplies: list[str] = Field(default_factory=list)
     evacuation_eta_hours: int | None = None
     symptoms: list[str] = Field(default_factory=list)
     vitals: VitalSigns = Field(default_factory=VitalSigns)

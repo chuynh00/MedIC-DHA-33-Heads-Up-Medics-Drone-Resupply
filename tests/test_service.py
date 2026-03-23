@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -5,8 +6,8 @@ from fastapi.testclient import TestClient
 from resupply_engine.api import create_app
 from resupply_engine.config import Settings
 from resupply_engine.ingest import DispatchIngestCoordinator, FileDropJsonIngestAdapter
-from resupply_engine.models import PlanningRequest
-from resupply_engine.models import SupplyNeed
+from resupply_engine.models import PlanningRequest, SupplyNeed, TbiBurstPayload
+from resupply_engine.normalize import normalize_payload
 from resupply_engine.packing import pack_supply_needs
 from resupply_engine.redundancy import calculate_redundancy_multiplier
 from resupply_engine.service import build_service
@@ -32,16 +33,46 @@ def sample_payload(notes: str | None = None) -> dict:
         "shootdown_rate": 25,
         "target_arrival_probability": 0.95,
         "payload": {
-            "burst_id": "burst-001",
-            "patient_id": "patient-123",
-            "case_id": "case-123",
-            "medic_id": "medic-alpha",
-            "occurred_at": "2026-03-20T20:00:00Z",
+            "burst_id": "BST-20340316-0001",
+            "patient_id": "PT-2847",
+            "case_id": "CASE-9182",
+            "mission_id": "MSN-0042",
+            "medic_id": "PJ-14",
+            "timestamp_utc": "2034-03-16T14:23:00Z",
+            "time_since_injury_min": 45,
+            "casualty_count": 1,
+            "priority_flag": "URGENT_SURGICAL",
             "evacuation_eta_hours": 36,
-            "symptoms": ["severe_tbi", "hemorrhage", "elevated_icp"],
             "risk_score": 82,
             "notes": notes,
-            "vitals": {"gcs": 7, "spo2": 92, "systolic_bp": 96},
+            "vitals": {
+                "blood_pressure_systolic": 162,
+                "blood_pressure_diastolic": 94,
+                "heart_rate_bpm": 52,
+                "respiratory_rate_rpm": 8,
+                "spo2_pct": 91,
+                "temperature_f": 98.6,
+            },
+            "neuro_exam": {
+                "gcs_total": 7,
+                "gcs_eye": 2,
+                "gcs_verbal": 2,
+                "gcs_motor": 3,
+                "loc_duration": ">30min",
+                "pupil_response": "UNEQUAL",
+                "vomiting": True,
+                "seizure": False,
+                "suspected_icp": "YES",
+            },
+            "injury": {"mechanism": "BLAST", "tbi_severity": "SEVERE"},
+            "airway_status": "COMPROMISED",
+            "treatment_given": [
+                "airway_repositioned",
+                "supplemental_oxygen",
+                "iv_access_established",
+                "head_elevated_30_degrees",
+            ],
+            "requested_supplies": ["hpt_saline", "whole_blood", "auto_burr_hole_kit"],
             "source": {"source_system": "medic-ai", "received_via": "local-rest"},
         },
     }
@@ -63,6 +94,8 @@ def test_create_plan_and_idempotent_retransmission(tmp_path: Path) -> None:
     assert first_json["manual_review_required"] is False
     assert first_json["canonical_case"]["source"]["received_via"] == "http_json"
     assert first_json["canonical_case"]["extra"]["ingest_context"]["source_locator"] == "/v1/plans"
+    assert first_json["canonical_case"]["mission_id"] == "MSN-0042"
+    assert first_json["canonical_case"]["priority_flag"] == "URGENT_SURGICAL"
 
 
 def test_packing_example_uses_two_drones() -> None:
@@ -191,3 +224,46 @@ def test_file_drop_adapter_feeds_same_planner_core(tmp_path: Path) -> None:
 
     assert plan.canonical_case.source.received_via == "file_drop_json"
     assert plan.canonical_case.extra["ingest_context"]["source_locator"] == "/var/forward-base/inbox/burst-001.json"
+
+
+def test_example_payload_is_accepted_as_is() -> None:
+    payload = json.loads((Path(__file__).resolve().parent.parent / "data" / "example_payload.json").read_text())
+    validated = TbiBurstPayload.model_validate(payload)
+    assert validated.burst_id == "BST-20340316-0001"
+    assert validated.case_id == "CASE-9182"
+    assert validated.injury.tbi_severity == "SEVERE"
+
+
+def test_invalid_tbi_enum_values_are_rejected() -> None:
+    payload = sample_payload()["payload"]
+    payload["neuro_exam"]["pupil_response"] = "BROKEN"
+    try:
+        TbiBurstPayload.model_validate(payload)
+    except Exception as exc:
+        assert "pupil_response" in str(exc)
+    else:
+        raise AssertionError("Expected invalid enum value to be rejected.")
+
+
+def test_normalization_derives_symptoms_and_preserves_context() -> None:
+    payload = TbiBurstPayload.model_validate(sample_payload()["payload"])
+    canonical_case = normalize_payload(payload)
+
+    assert canonical_case.occurred_at.isoformat() == "2034-03-16T14:23:00+00:00"
+    assert canonical_case.vitals.temperature_c == 37.0
+    assert canonical_case.vitals.gcs == 7
+    assert canonical_case.vitals.gcs_eye == 2
+    assert canonical_case.vitals.diastolic_bp == 94
+    assert canonical_case.mission_id == "MSN-0042"
+    assert canonical_case.time_since_injury_min == 45
+    assert canonical_case.casualty_count == 1
+    assert canonical_case.requested_supplies == ["hpt_saline", "whole_blood", "auto_burr_hole_kit"]
+    assert canonical_case.treatment_given == [
+        "airway_repositioned",
+        "supplemental_oxygen",
+        "iv_access_established",
+        "head_elevated_30_degrees",
+    ]
+    assert canonical_case.extra["raw_assessment"]["injury"]["tbi_severity"] == "SEVERE"
+    assert canonical_case.extra["raw_assessment"]["neuro_exam"]["suspected_icp"] == "YES"
+    assert canonical_case.symptoms == ["airway_compromise", "elevated_icp", "severe_tbi", "vomiting"]

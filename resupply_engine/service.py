@@ -333,9 +333,13 @@ class DispatchPlanningService:
             for manifest in base_manifests
         ]
         flags_text = "; ".join(flag.message for flag in review_flags) or "No review flags."
+        medic_requested_text = ", ".join(canonical_case.requested_supplies) or "none"
         return (
-            f"Patient {canonical_case.patient_id} / case {canonical_case.case_id}\n"
+            f"Patient {canonical_case.patient_id} / case {canonical_case.case_id} / mission {canonical_case.mission_id}\n"
+            f"Priority: {canonical_case.priority_flag} | Time since injury: {canonical_case.time_since_injury_min} min | "
+            f"Casualty count: {canonical_case.casualty_count}\n"
             f"Symptoms: {', '.join(canonical_case.symptoms) or 'none reported'}\n"
+            f"Medic requested supplies: {medic_requested_text}\n"
             f"Requested supplies: {supply_summary}\n"
             f"Base drone set ({len(base_manifests)} drones): {' | '.join(manifest_lines) if manifest_lines else 'none'}\n"
             f"Shootdown rate: {shootdown_rate}% | Replication count: {redundancy_multiplier} | "
