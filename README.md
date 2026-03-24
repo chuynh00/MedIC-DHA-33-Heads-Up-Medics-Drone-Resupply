@@ -14,6 +14,7 @@ The service accepts a structured TBI burst payload, normalizes the incoming asse
 - Packs supplies into base drone manifests without exceeding the per-drone payload limit.
 - Calculates how many replicated drone sets to send based on shootdown rate and target arrival confidence.
 - Stores generated plans and operator decisions in a local SQLite database.
+- Writes a human-readable operator plan brief to the local `exports/` directory for each created or recalculated plan.
 
 ## Main Components
 
@@ -57,6 +58,7 @@ Output:
 - achieved arrival confidence
 - review flags
 - human-readable plan summary
+- human-readable `.txt` operator brief written under `exports/<plan_id>/`
 
 ## Local Setup
 
@@ -105,6 +107,15 @@ Once the server is running:
 
 - API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Generated operator text briefs: [exports](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/exports)
+
+After a successful `POST /v1/plans` or plan recalculation, the backend writes a readable text brief to:
+
+```text
+exports/<plan_id>/mission-<mission_id>__burst-<burst_id>__rev-001.txt
+```
+
+Later recalculations create new revisions such as `rev-002.txt` in the same plan folder.
 
 ## Run Tests
 
@@ -147,6 +158,7 @@ python3 -m compileall resupply_engine tests backend.py
 - `total_drones`
 - `per_item_arrival_probability`
 - `summary_text`
+- `export.export_path`
 
 ## Notes
 
