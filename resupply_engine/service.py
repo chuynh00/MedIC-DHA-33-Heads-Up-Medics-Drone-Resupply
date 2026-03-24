@@ -8,6 +8,7 @@ from copy import deepcopy
 from resupply_engine.catalog import load_supply_catalog, load_supply_rules
 from resupply_engine.clinical_rules import ClinicalRuleEngine
 from resupply_engine.config import Settings
+from resupply_engine.exporter import OperatorTextExporter, add_export_failure_flag
 from resupply_engine.ingest import IngestContext
 from resupply_engine.llm_extractor import extract_symptoms_from_notes
 from resupply_engine.models import (
@@ -36,6 +37,7 @@ class DispatchPlanningService:
         self.rules = load_supply_rules(settings.data_dir / "supply_rules.csv")
         self.rule_engine = ClinicalRuleEngine(self.catalog, self.rules)
         self.store = store or SQLitePlanStore(settings.db_path)
+        self.text_exporter = OperatorTextExporter(settings.exports_dir)
 
     def create_plan(
         self,
@@ -88,6 +90,7 @@ class DispatchPlanningService:
             review_flags=review_flags,
             required_supplies=required_supplies,
         )
+        plan = self._attach_text_export(plan, revision=1)
 
         # Persist both the rendered plan and a creation event so the operator workflow is auditable.
         self.store.save_new_plan(plan, raw_payload)
@@ -164,6 +167,8 @@ class DispatchPlanningService:
             plan_id=existing.plan_id,
             status="draft",
         )
+        next_revision = (existing.export.export_revision or 0) + 1
+        plan = self._attach_text_export(plan, revision=next_revision)
 
         # Store the recalculated version under the same plan id so the latest draft remains the
         # canonical operator-facing record, while the event log preserves the edit history.
@@ -347,6 +352,22 @@ class DispatchPlanningService:
             f"Total drones to dispatch: {total_drones}\n"
             f"Review flags: {flags_text}"
         )
+
+    def _attach_text_export(self, plan: DispatchPlan, revision: int) -> DispatchPlan:
+        try:
+            export_metadata = self.text_exporter.export(plan, revision=revision)
+            return plan.model_copy(update={"export": export_metadata})
+        except OSError as exc:
+            updated_flags = add_export_failure_flag(
+                plan.review_flags,
+                f"Failed to write operator text export: {exc}",
+            )
+            return plan.model_copy(
+                update={
+                    "review_flags": updated_flags,
+                    "manual_review_required": True,
+                }
+            )
 
     def _needs_from_operator_request(self, required_supplies: list[EditedSupplyNeed] | None) -> list[SupplyNeed]:
         if required_supplies is None:

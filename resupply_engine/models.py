@@ -228,6 +228,14 @@ class ExtractionResult(BaseModel):
     explanation: str = ""
 
 
+class ExportMetadata(BaseModel):
+    """Metadata describing a generated operator-facing text export."""
+
+    export_path: str | None = None
+    export_format: Literal["txt"] | None = None
+    export_revision: int | None = None
+
+
 class DispatchPlan(BaseModel):
     """Full dispatch recommendation including supplies, manifests, redundancy, and review state."""
 
@@ -247,6 +255,7 @@ class DispatchPlan(BaseModel):
     manual_review_required: bool
     review_flags: list[ReviewFlag] = Field(default_factory=list)
     summary_text: str
+    export: ExportMetadata = Field(default_factory=ExportMetadata)
     status: Literal["draft", "approved", "rejected"] = "draft"
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)

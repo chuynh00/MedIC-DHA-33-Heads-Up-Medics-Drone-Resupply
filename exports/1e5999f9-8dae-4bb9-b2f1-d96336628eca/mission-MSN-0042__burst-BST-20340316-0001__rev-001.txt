@@ -1,0 +1,25 @@
+MEDIC DRONE RESUPPLY DISPATCH BRIEF
+
+Patient ID: PT-2847
+Mission ID: MSN-0042
+Medic ID: PJ-14
+This plan is the response to burst ID: BST-20340316-0001
+Burst timestamp_utc: 2034-03-16T14:23:00+00:00
+Shootdown rate: 75%
+Target arrival probability: 95.00%
+
+Required Supplies:
+- 1x Airway Support Kit (3.5 lb each)
+- 2x Hemostatic Dressing Bundle (1.5 lb each)
+- 1x TBI Monitoring Kit (4.0 lb each)
+
+Base Manifest:
+- Drone 1: 9.0 lb | 1x Airway Support Kit, 1x Hemostatic Dressing Bundle, 1x TBI Monitoring Kit
+- Drone 2: 1.5 lb | 1x Hemostatic Dressing Bundle
+
+Redundancy multiplier: 11
+Per item arrival probability: 95.78%
+Total drones to be sent: 22
+
+Review Flags:
+- none

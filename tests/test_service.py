@@ -19,6 +19,7 @@ def make_settings(tmp_path: Path) -> Settings:
         base_dir=base_dir,
         data_dir=base_dir / "data",
         db_path=tmp_path / "resupply-test.db",
+        exports_dir=tmp_path / "exports",
     )
 
 
@@ -90,12 +91,16 @@ def test_create_plan_and_idempotent_retransmission(tmp_path: Path) -> None:
     first_json = first.json()
     second_json = second.json()
     assert first_json["plan_id"] == second_json["plan_id"]
-    assert first_json["total_drones"] == 15
+    assert first_json["total_drones"] == 12
     assert first_json["manual_review_required"] is False
     assert first_json["canonical_case"]["source"]["received_via"] == "http_json"
     assert first_json["canonical_case"]["extra"]["ingest_context"]["source_locator"] == "/v1/plans"
     assert first_json["canonical_case"]["mission_id"] == "MSN-0042"
     assert first_json["canonical_case"]["priority_flag"] == "URGENT_SURGICAL"
+    assert first_json["export"]["export_format"] == "txt"
+    assert first_json["export"]["export_revision"] == 1
+    assert first_json["export"]["export_path"].endswith("__rev-001.txt")
+    assert Path(first_json["export"]["export_path"]).exists()
 
 
 def test_packing_example_uses_two_drones() -> None:
@@ -192,6 +197,9 @@ def test_operator_recalculate_with_manual_manifest(tmp_path: Path) -> None:
     assert body["plan_id"] == plan_id
     assert len(body["base_manifests"]) == 4
     assert any(flag["code"] == "operator_notes" for flag in body["review_flags"])
+    assert body["export"]["export_revision"] == 2
+    assert body["export"]["export_path"].endswith("__rev-002.txt")
+    assert Path(body["export"]["export_path"]).exists()
 
 
 def test_decision_endpoint_freezes_status(tmp_path: Path) -> None:
@@ -224,11 +232,12 @@ def test_file_drop_adapter_feeds_same_planner_core(tmp_path: Path) -> None:
 
     assert plan.canonical_case.source.received_via == "file_drop_json"
     assert plan.canonical_case.extra["ingest_context"]["source_locator"] == "/var/forward-base/inbox/burst-001.json"
+    assert plan.export.export_path is not None
 
 
 def test_example_payload_is_accepted_as_is() -> None:
-    payload = json.loads((Path(__file__).resolve().parent.parent / "data" / "example_payload.json").read_text())
-    validated = TbiBurstPayload.model_validate(payload)
+    planning_request = json.loads((Path(__file__).resolve().parent.parent / "data" / "example_payload.json").read_text())
+    validated = TbiBurstPayload.model_validate(planning_request["payload"])
     assert validated.burst_id == "BST-20340316-0001"
     assert validated.case_id == "CASE-9182"
     assert validated.injury.tbi_severity == "SEVERE"
@@ -266,4 +275,27 @@ def test_normalization_derives_symptoms_and_preserves_context() -> None:
     ]
     assert canonical_case.extra["raw_assessment"]["injury"]["tbi_severity"] == "SEVERE"
     assert canonical_case.extra["raw_assessment"]["neuro_exam"]["suspected_icp"] == "YES"
-    assert canonical_case.symptoms == ["airway_compromise", "elevated_icp", "severe_tbi", "vomiting"]
+    assert canonical_case.symptoms == ["airway_compromise", "elevated_icp", "hemorrhage", "severe_tbi", "vomiting"]
+
+
+def test_text_export_contains_operator_fields(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+    response = client.post("/v1/plans", json=sample_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    export_text = Path(body["export"]["export_path"]).read_text(encoding="utf-8")
+
+    assert "Patient ID: PT-2847" in export_text
+    assert "Mission ID: MSN-0042" in export_text
+    assert "Medic ID: PJ-14" in export_text
+    assert "This plan is the response to burst ID: BST-20340316-0001" in export_text
+    assert "Shootdown rate: 25%" in export_text
+    assert "Target arrival probability: 95.00%" in export_text
+    assert "Burst timestamp_utc: 2034-03-16T14:23:00+00:00" in export_text
+    assert "Required Supplies:" in export_text
+    assert "Base Manifest:" in export_text
+    assert "Redundancy multiplier:" in export_text
+    assert "Per item arrival probability:" in export_text
+    assert "Total drones to be sent:" in export_text
+    assert '"patient_id"' not in export_text
