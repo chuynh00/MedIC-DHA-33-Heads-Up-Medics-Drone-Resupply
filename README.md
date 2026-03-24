@@ -107,12 +107,11 @@ Once the server is running:
 
 - API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-- Generated operator text briefs: [exports](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/exports)
 
 After a successful `POST /v1/plans` or plan recalculation, the backend writes a readable text brief to:
 
 ```text
-exports/<plan_id>/mission-<mission_id>__burst-<burst_id>__rev-001.txt
+MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/exports/<plan_id>/mission-<mission_id>__burst-<burst_id>__rev-001.txt
 ```
 
 Later recalculations create new revisions such as `rev-002.txt` in the same plan folder.
