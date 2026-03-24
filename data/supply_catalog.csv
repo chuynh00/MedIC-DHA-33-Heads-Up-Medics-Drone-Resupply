@@ -2,7 +2,11 @@ item_id,name,unit_weight_lb,unit_of_issue,is_bundle,notes
 tbi_monitoring_kit,TBI Monitoring Kit,4.0,kit,true,Neuro monitoring and observation aids
 airway_support_kit,Airway Support Kit,3.5,kit,true,Airway adjuncts and support tools
 iv_fluid_bundle,IV Fluid Bundle,8.0,bundle,true,Fluids for delayed evacuation support
-seizure_control_pack,Seizure Control Pack,6.0,pack,true,Seizure mitigation medication bundle
 hemostatic_dressing_bundle,Hemostatic Dressing Bundle,1.5,bundle,true,Hemorrhage control dressing set
 hypertonic_saline_kit,Hypertonic Saline Kit,5.0,kit,true,For suspected elevated ICP support
-analgesia_pack,Analgesia Pack,2.0,pack,true,Pain control medications
+infrared_intracranial_hemorrhage_device,Infrared Intracranial Hemorrhage Kit,7.0,device,true,For suspected intracranial hemorrhage support
+auto_burr_hole_device,Auto Burr Hole Kit,10.0,device,true,For suspected elevated ICP with delayed evacuation
+fresh_whole_blood,Fresh Whole Blood,10.0,unit,false,For hemorrhagic shock resuscitation
+pentobarbital_sedation_kit,Pentobarbital Sedation Kit,4.5,kit,true,For seizure control and sedation in high-risk patients and to reduce metabolic rate
+benzodiazepine_sedation_kit,Benzodiazepine Sedation Kit,3.0,kit,true,For seizure control and sedation in high-risk patients
+ketamine_analgesia_kit,Ketamine Analgesia Kit,3.5,kit,true,For analgesia support in high-risk trauma patients and to reduce cortical spreading depolarizations

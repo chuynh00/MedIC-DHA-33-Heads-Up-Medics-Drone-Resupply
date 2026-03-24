@@ -1,0 +1,156 @@
+# MedIC Drone Resupply Engine
+
+This repository contains a local-first Python backend for planning medical drone resupply missions for combat medics treating traumatic brain injury patients in contested environments.
+
+The service accepts a structured TBI burst payload, normalizes the incoming assessment, applies clinician-authored supply rules, packs the resulting supplies into 10 lb drone manifests, applies redundancy based on drone shootdown risk, and returns a dispatch plan that an operator can review.
+
+## What The Codebase Does
+
+- Accepts a TBI burst message over a local HTTP API.
+- Preserves the external payload structure while normalizing it into an internal case model.
+- Derives canonical symptoms from structured assessment fields such as neuro exam, airway status, and injury severity.
+- Uses local CSV files for the supply catalog and clinician-authored supply rules.
+- Builds a required supply list from matching rules.
+- Packs supplies into base drone manifests without exceeding the per-drone payload limit.
+- Calculates how many replicated drone sets to send based on shootdown rate and target arrival confidence.
+- Stores generated plans and operator decisions in a local SQLite database.
+
+## Main Components
+
+- [resupply_engine/api.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/api.py)
+  FastAPI entrypoints for creating, retrieving, recalculating, and approving plans.
+- [resupply_engine/ingest.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/ingest.py)
+  Transport adapters that make the planner independent of whether input arrives via HTTP or another ingestion path.
+- [resupply_engine/models.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/models.py)
+  Pydantic models for the external TBI payload, canonical internal case, supplies, manifests, and plans.
+- [resupply_engine/normalize.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/normalize.py)
+  Mapping from the raw burst payload into the normalized planner-facing case.
+- [resupply_engine/clinical_rules.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/clinical_rules.py)
+  Rule engine that turns patient context into required supplies.
+- [resupply_engine/packing.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/packing.py)
+  Packing logic that assigns supplies to base drone manifests under the payload limit.
+- [resupply_engine/redundancy.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/redundancy.py)
+  Redundancy math based on shootdown rate and target arrival probability.
+- [resupply_engine/service.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/service.py)
+  Main orchestration layer for planning, recalculation, review flags, and persistence.
+- [data/supply_catalog.csv](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/data/supply_catalog.csv)
+  Sendable items and their weights.
+- [data/supply_rules.csv](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/data/supply_rules.csv)
+  Clinician-authored rule definitions used by the recommender.
+- [data/example_payload.json](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/data/example_payload.json)
+  Example TBI burst payload.
+
+## Current Input And Output
+
+The primary endpoint is `POST /v1/plans`.
+
+Input:
+- `shootdown_rate`
+- `target_arrival_probability`
+- `payload` containing the TBI burst assessment
+
+Output:
+- required supplies to send
+- base drone manifests and what each drone carries
+- redundancy multiplier
+- total drones to dispatch
+- achieved arrival confidence
+- review flags
+- human-readable plan summary
+
+## Local Setup
+
+This project is designed to run fully locally.
+
+1. Create a virtual environment if you do not already have one:
+
+```bash
+python3 -m venv .venv
+```
+
+2. Activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+If you prefer not to use editable installs, this also works:
+
+```bash
+pip install fastapi uvicorn pydantic pytest httpx
+```
+
+## Run Locally
+
+Start the API server from the repo root:
+
+```bash
+source .venv/bin/activate
+uvicorn resupply_engine.api:app --reload
+```
+
+Or without activating the virtual environment:
+
+```bash
+.venv/bin/uvicorn resupply_engine.api:app --reload
+```
+
+Once the server is running:
+
+- API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+
+## Run Tests
+
+Run the test suite:
+
+```bash
+.venv/bin/pytest -q
+```
+
+Run a quick syntax/compile check:
+
+```bash
+python3 -m compileall resupply_engine tests backend.py
+```
+
+## Example Request Flow
+
+1. Start the FastAPI server.
+2. Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+3. Expand `POST /v1/plans`.
+4. Click `Try it out`.
+5. Paste a request body using the shape from [data/example_payload.json](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/data/example_payload.json), wrapped inside:
+
+```json
+{
+  "shootdown_rate": 25,
+  "target_arrival_probability": 0.95,
+  "payload": {
+    "...": "..."
+  }
+}
+```
+
+6. Click `Execute`.
+7. Review the response fields:
+
+- `required_supplies`
+- `base_manifests`
+- `redundancy_multiplier`
+- `total_drones`
+- `per_item_arrival_probability`
+- `summary_text`
+
+## Notes
+
+- The current recommendation engine is rule-based.
+- The free-text extractor is only a bounded helper for symptom extraction; it does not replace clinician-authored rules.
+- `requested_supplies` from the payload are preserved as advisory context and do not automatically override the rule engine.
+- The current implementation is backend-first. The FastAPI docs page is a testing interface, not the final operator dashboard.

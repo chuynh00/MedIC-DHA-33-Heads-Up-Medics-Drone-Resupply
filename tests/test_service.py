@@ -64,7 +64,7 @@ def sample_payload(notes: str | None = None) -> dict:
                 "seizure": False,
                 "suspected_icp": "YES",
             },
-            "injury": {"mechanism": "BLAST", "tbi_severity": "SEVERE"},
+            "injury": {"mechanism": "BLAST", "tbi_severity": "SEVERE", "hemorrhage": "YES"},
             "airway_status": "COMPROMISED",
             "treatment_given": [
                 "airway_repositioned",
@@ -90,7 +90,7 @@ def test_create_plan_and_idempotent_retransmission(tmp_path: Path) -> None:
     first_json = first.json()
     second_json = second.json()
     assert first_json["plan_id"] == second_json["plan_id"]
-    assert first_json["total_drones"] == 9
+    assert first_json["total_drones"] == 15
     assert first_json["manual_review_required"] is False
     assert first_json["canonical_case"]["source"]["received_via"] == "http_json"
     assert first_json["canonical_case"]["extra"]["ingest_context"]["source_locator"] == "/v1/plans"
@@ -180,7 +180,7 @@ def test_operator_recalculate_with_manual_manifest(tmp_path: Path) -> None:
                 },
                 {
                     "manifest_id": 4,
-                    "items": [{"item_id": "analgesia_pack", "quantity": 1}],
+                    "items": [{"item_id": "ketamine_analgesia_kit", "quantity": 1}],
                 },
             ],
             "operator_notes": "Grouped hemorrhage control around fluid support.",

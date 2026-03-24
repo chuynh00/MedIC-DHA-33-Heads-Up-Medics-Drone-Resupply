@@ -1,8 +1,12 @@
 rule_id,symptom,min_risk_score,max_risk_score,min_evacuation_eta_hours,max_evacuation_eta_hours,item_id,quantity,rationale,requires_manual_review_on_missing
 rule-severe-tbi,severe_tbi,,,,,tbi_monitoring_kit,1,Send neuro monitoring support for severe TBI,true
 rule-airway,airway_compromise,,,,,airway_support_kit,1,Send airway support for respiratory compromise,true
-rule-seizure,seizure,,,,,seizure_control_pack,1,Send seizure control medications,true
+rule-seizure,seizure,,,,,pentobarbital_sedation_kit,1,Send seizure control medications,true
+rule-seizure,seizure,,,,,benzodiazepine_sedation_kit,1,Send seizure control medications,true
+rule-hemorrhagic-shock,hemorrhagic_shock,,,,,fresh_whole_blood,2,Send blood for hemorrhagic shock resuscitation,true
 rule-hemorrhage,hemorrhage,,,,,hemostatic_dressing_bundle,2,Send hemorrhage control dressings,true
 rule-elevated-icp,elevated_icp,70,,,,hypertonic_saline_kit,1,High risk with suspected ICP elevation requires hypertonic saline,true
+rule-elevated-icp,elevated_icp,70,,,,auto_burr_hole_device,1,High risk with suspected ICP elevation and delayed evacuation requires burr hole device,true
 rule-prolonged-evac,,, ,24,,iv_fluid_bundle,1,Delayed evacuation requires fluid support,false
-rule-high-risk-analgesia,,60,,,,analgesia_pack,1,High-risk trauma patients should receive analgesia support,false
+rule-high-risk-analgesia,,60,,,,ketamine_analgesia_kit,1,High-risk trauma patients should receive analgesia support,false
+rule-suspected-intracranial-hemorrhage,suspected_intracranial_hemorrhage,,,,,infrared_intracranial_hemorrhage_device,1,Device support for suspected intracranial hemorrhage,true

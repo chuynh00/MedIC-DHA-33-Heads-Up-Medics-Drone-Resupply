@@ -80,6 +80,8 @@ class IncomingInjury(BaseModel):
 
     mechanism: str | None = None
     tbi_severity: Literal["MILD", "MODERATE", "SEVERE", "PENETRATING"]
+    hemorrhage: Literal["YES", "NO", "UNKNOWN"] | None = None
+
 
 
 class TbiBurstPayload(BaseModel):

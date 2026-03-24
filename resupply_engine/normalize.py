@@ -28,6 +28,10 @@ def _derive_symptoms(payload: TbiBurstPayload) -> list[str]:
             symptoms.add("elevated_icp")
         if payload.neuro_exam.pupil_response in {"UNEQUAL", "NON_REACTIVE"}:
             symptoms.add("severe_tbi")
+        if payload.neuro_exam.gcs_total is not None and payload.neuro_exam.gcs_total <= 8:
+            symptoms.add("severe_tbi")
+        if payload.injury.hemorrhage == "YES":
+            symptoms.add("hemorrhage")
     return sorted(_canonicalize_symptom(symptom) for symptom in symptoms)
 
 

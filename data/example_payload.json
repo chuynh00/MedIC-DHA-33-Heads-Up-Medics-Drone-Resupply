@@ -1,52 +1,51 @@
 {
-  "patient_id": "PT-2847",
-  "burst_id": "BST-20340316-0001",
-  "case_id": "CASE-9182",
-  "mission_id": "MSN-0042",
-  "timestamp_utc": "2034-03-16T14:23:00Z",
-  "time_since_injury_min": 45,
-  "casualty_count": 1,
-  "priority_flag": "URGENT_SURGICAL",
-  "medic_id": "PJ-14",
-
-  "vitals": {
-    "blood_pressure_systolic": 162,
-    "blood_pressure_diastolic": 94,
-    "heart_rate_bpm": 52,
-    "respiratory_rate_rpm": 8,
-    "spo2_pct": 91,
-    "temperature_f": 98.6
-  },
-
-  "neuro_exam": {
-    "gcs_total": 7,
-    "gcs_eye": 2,
-    "gcs_verbal": 2,
-    "gcs_motor": 3,
-    "loc_duration": ">30min",
-    "pupil_response": "UNEQUAL",
-    "vomiting": true,
-    "seizure": false,
-    "suspected_icp": "YES"
-  },
-
-  "injury": {
-    "mechanism": "BLAST",
-    "tbi_severity": "SEVERE"
-  },
-
-  "airway_status": "COMPROMISED",
-
-  "treatment_given": [
-    "airway_repositioned",
-    "supplemental_oxygen",
-    "iv_access_established",
-    "head_elevated_30_degrees"
-  ],
-
-  "requested_supplies": [
-    "hpt_saline",
-    "whole_blood",
-    "auto_burr_hole_kit"
-  ]
+    "shootdown_rate": 75,
+    "target_arrival_probability": 0.95,
+    "payload": {
+        "patient_id": "PT-2847",
+        "burst_id": "BST-20340316-0001",
+        "case_id": "CASE-9182",
+        "mission_id": "MSN-0042",
+        "timestamp_utc": "2034-03-16T14:23:00Z",
+        "time_since_injury_min": 45,
+        "casualty_count": 1,
+        "priority_flag": "URGENT_SURGICAL",
+        "medic_id": "PJ-14",
+        "vitals": {
+            "blood_pressure_systolic": 162,
+            "blood_pressure_diastolic": 94,
+            "heart_rate_bpm": 52,
+            "respiratory_rate_rpm": 8,
+            "spo2_pct": 91,
+            "temperature_f": 98.6
+        },
+        "neuro_exam": {
+            "gcs_total": 7,
+            "gcs_eye": 2,
+            "gcs_verbal": 2,
+            "gcs_motor": 3,
+            "loc_duration": ">30min",
+            "pupil_response": "UNEQUAL",
+            "vomiting": true,
+            "seizure": false,
+            "suspected_icp": "YES"
+        },
+        "injury": {
+            "mechanism": "BLAST",
+            "tbi_severity": "SEVERE",
+            "hemorrhage": "YES"
+        },
+        "airway_status": "COMPROMISED",
+        "treatment_given": [
+            "airway_repositioned",
+            "supplemental_oxygen",
+            "iv_access_established",
+            "head_elevated_30_degrees"
+        ],
+        "requested_supplies": [
+            "hpt_saline",
+            "whole_blood",
+            "auto_burr_hole_kit"
+        ]
+    }
 }
