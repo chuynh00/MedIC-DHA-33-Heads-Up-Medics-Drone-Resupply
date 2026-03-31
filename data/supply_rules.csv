@@ -1,12 +1,11 @@
-rule_id,symptom,min_risk_score,max_risk_score,min_evacuation_eta_hours,max_evacuation_eta_hours,item_id,quantity,rationale,requires_manual_review_on_missing
-rule-severe-tbi,severe_tbi,,,,,tbi_monitoring_kit,1,Send neuro monitoring support for severe TBI,true
-rule-airway,airway_compromise,,,,,airway_support_kit,1,Send airway support for respiratory compromise,true
-rule-seizure,seizure,,,,,pentobarbital_sedation_kit,1,Send seizure control medications,true
-rule-seizure,seizure,,,,,benzodiazepine_sedation_kit,1,Send seizure control medications,true
-rule-hemorrhagic-shock,hemorrhagic_shock,,,,,fresh_whole_blood,2,Send blood for hemorrhagic shock resuscitation,true
-rule-hemorrhage,hemorrhage,,,,,hemostatic_dressing_bundle,2,Send hemorrhage control dressings,true
-rule-elevated-icp,elevated_icp,70,,,,hypertonic_saline_kit,1,High risk with suspected ICP elevation requires hypertonic saline,true
-rule-elevated-icp,elevated_icp,70,,,,auto_burr_hole_device,1,High risk with suspected ICP elevation and delayed evacuation requires burr hole device,true
-rule-prolonged-evac,,, ,24,,iv_fluid_bundle,1,Delayed evacuation requires fluid support,false
-rule-high-risk-analgesia,,60,,,,ketamine_analgesia_kit,1,High-risk trauma patients should receive analgesia support,false
-rule-suspected-intracranial-hemorrhage,suspected_intracranial_hemorrhage,,,,,infrared_intracranial_hemorrhage_device,1,Device support for suspected intracranial hemorrhage,true
+rule_id,min_gcs_total,max_gcs_total,seizure,vomiting,head_external_hemorrhage,suspected_icp,location_contains,required_march_flag,min_systolic_bp,max_systolic_bp,min_spo2,max_spo2,min_heart_rate,max_heart_rate,min_temp_c,max_temp_c,item_id,quantity,rationale,requires_manual_review_on_missing
+rule-low-gcs-monitoring,,8,,,,,,,,,,,,,,,tbi_detection_monitoring_kit,1,Low GCS requires TBI monitoring support,true
+rule-airway-march,,,,,,,,airway_compromised,,,,,,,,,airway_support_kit,1,Airway-compromised MARCH status requires airway support,true
+rule-respiratory-march,,,,,,,,respiratory_compromise,,,,,,,,,airway_support_kit,1,Respiratory compromise requires airway and breathing support,true
+rule-seizure-pentobarbital,,,true,,,,,,,,,,,,,,pentobarbital_sedation_kit,1,Active seizure requires seizure control medications,true
+rule-seizure-benzodiazepine,,,true,,,,,,,,,,,,,,benzodiazepine_sedation_kit,1,Active seizure requires seizure control medications,true
+rule-head-hemorrhage,,,,,true,,,,,,,,,,,,hemostatic_dressing_bundle,2,External head hemorrhage requires hemorrhage control dressings,true
+rule-massive-hemorrhage-march,,,,,,,,massive_hemorrhage,,,,,,,,,hemostatic_dressing_bundle,2,Massive hemorrhage MARCH status requires hemorrhage control dressings,true
+rule-suspected-icp,,,,,,true,,,,,,,,,,,hypertonic_saline_kit,1,Suspected ICP elevation requires hypertonic saline,true
+rule-circulatory-march,,,,,,,,circulatory_compromise,,,,,,,,,iv_fluid_bundle,1,Circulatory compromise requires fluid support,false
+rule-hypothermia-march,,,,,,,,hypothermia,,,,,,,,,iv_fluid_bundle,1,Hypothermia risk requires thermal and fluid support,false

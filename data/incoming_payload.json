@@ -1,0 +1,25 @@
+{
+  "patient_id": "PT-2847",
+  "mission_id": "MSN-0042",
+  "medic_id": "PJ-14",
+  "gcs_total": 7,
+  "gcs_eye": 2,
+  "gcs_verbal": 2,
+  "gcs_motor": 3,
+  "bp_systolic": 162,
+  "bp_diastolic": 94,
+  "heart_rate": 52,
+  "oxygen_saturation": 91,
+  "temp_c": 37.0,
+  "seizure": false,
+  "vomiting": true,
+  "head_external_hemorrhage": true,
+  "suspected_icp": true,
+  "location": "FRONT-LEFT",
+  "march_flags": [
+    "airway_compromised",
+    "circulatory_compromise"
+  ],
+  "notes": "Patient has worsening neuro findings after head trauma.",
+  "timestamp": "2034-03-16T14:23:00Z"
+}

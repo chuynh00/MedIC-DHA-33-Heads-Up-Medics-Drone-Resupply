@@ -36,7 +36,17 @@ def render_operator_text(plan: DispatchPlan) -> str:
             f"Mission ID: {plan.canonical_case.mission_id}",
             f"Medic ID: {plan.canonical_case.medic_id}",
             f"This plan is the response to burst ID: {plan.burst_id}",
-            f"Burst timestamp_utc: {plan.canonical_case.occurred_at.isoformat()}",
+            f"Burst timestamp_utc: {plan.canonical_case.reported_at.isoformat()}",
+            f"GCS Total: {plan.canonical_case.vitals.gcs}",
+            f"MARCH Flags: {', '.join(plan.canonical_case.march_flags) or 'none'}",
+            (
+                "Direct Findings: "
+                f"seizure={str(plan.canonical_case.seizure).lower()}, "
+                f"vomiting={str(plan.canonical_case.vomiting).lower()}, "
+                f"head_external_hemorrhage={str(plan.canonical_case.head_external_hemorrhage).lower()}, "
+                f"suspected_icp={str(plan.canonical_case.suspected_icp).lower()}, "
+                f"location={plan.canonical_case.location or 'none'}"
+            ),
             f"Shootdown rate: {plan.shootdown_rate}%",
             f"Target arrival probability: {plan.target_arrival_probability:.2%}",
             "",

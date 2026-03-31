@@ -34,79 +34,42 @@ class SourceMetadata(BaseModel):
     source_message_type: str | None = None
 
 
-class IncomingVitals(BaseModel):
-    """Vitals as transmitted in the external TBI burst payload."""
+class SoftwareDecisionSupportPayload(BaseModel):
+    """Flat medic-system patient profile sent from the field decision support tool."""
 
-    blood_pressure_systolic: int | None = None
-    blood_pressure_diastolic: int | None = None
-    heart_rate_bpm: int | None = None
-    respiratory_rate_rpm: int | None = None
-    spo2_pct: int | None = None
-    temperature_f: float | None = None
-
-
-class IncomingNeuroExam(BaseModel):
-    """Structured neuro exam fields sent by the upstream assessment system."""
-
-    gcs_total: int | None = None
-    gcs_eye: int | None = None
-    gcs_verbal: int | None = None
-    gcs_motor: int | None = None
-    loc_duration: Literal["NONE", "<30MIN", ">30MIN"] | None = None
-    pupil_response: Literal["NORMAL", "UNEQUAL", "NON_REACTIVE"] | None = None
-    vomiting: bool | None = None
-    seizure: bool | None = None
-    suspected_icp: Literal["YES", "NO", "UNKNOWN"] | None = None
-
-    @field_validator("loc_duration", "pupil_response", "suspected_icp", mode="before")
-    @classmethod
-    def normalize_enum_fields(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip().upper()
-        if normalized == "NONE":
-            return "NONE"
-        if normalized == "<30MIN":
-            return "<30MIN"
-        if normalized == ">30MIN":
-            return ">30MIN"
-        if normalized == "NON-REACTIVE":
-            return "NON_REACTIVE"
-        return normalized.replace(" ", "_")
-
-
-class IncomingInjury(BaseModel):
-    """Injury characterization fields sent in the external burst payload."""
-
-    mechanism: str | None = None
-    tbi_severity: Literal["MILD", "MODERATE", "SEVERE", "PENETRATING"]
-    hemorrhage: Literal["YES", "NO", "UNKNOWN"] | None = None
-
-
-
-class TbiBurstPayload(BaseModel):
-    """Raw inbound TBI burst message before the app normalizes it."""
-
-    burst_id: str
     patient_id: str
-    case_id: str
     mission_id: str
     medic_id: str
-    timestamp_utc: datetime
-    time_since_injury_min: int
-    casualty_count: int
-    priority_flag: str
-    vitals: IncomingVitals = Field(default_factory=IncomingVitals)
-    neuro_exam: IncomingNeuroExam | None = None
-    injury: IncomingInjury
-    airway_status: str | None = None
-    treatment_given: list[str] = Field(default_factory=list)
-    requested_supplies: list[str] = Field(default_factory=list)
-    evacuation_eta_hours: int | None = None
-    risk_score: float | None = None
+    gcs_total: int
+    gcs_eye: int
+    gcs_verbal: int
+    gcs_motor: int
+    bp_systolic: int
+    bp_diastolic: int
+    heart_rate: int
+    oxygen_saturation: int
+    temp_c: float
+    seizure: bool
+    vomiting: bool
+    head_external_hemorrhage: bool
+    suspected_icp: bool
+    location: str | None = None
+    march_flags: list[str] = Field(default_factory=list)
     notes: str | None = None
+    timestamp: datetime
     source: SourceMetadata = Field(default_factory=SourceMetadata)
     extra: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("march_flags", mode="before")
+    @classmethod
+    def normalize_march_flags(cls, value: list[str] | None) -> list[str]:
+        if value is None:
+            return []
+        return [
+            str(flag).strip().lower().replace(" ", "_").replace("-", "_")
+            for flag in value
+            if str(flag).strip()
+        ]
 
 
 class PlanningRequest(BaseModel):
@@ -114,7 +77,8 @@ class PlanningRequest(BaseModel):
 
     shootdown_rate: int
     target_arrival_probability: float = 0.95
-    payload: TbiBurstPayload
+    burst_id: str | None = None
+    software_decision_support_payload: SoftwareDecisionSupportPayload
 
     @field_validator("target_arrival_probability")
     @classmethod
@@ -129,20 +93,17 @@ class CanonicalCase(BaseModel):
 
     burst_id: str
     patient_id: str
-    case_id: str
     mission_id: str
     medic_id: str
-    occurred_at: datetime
-    time_since_injury_min: int
-    casualty_count: int
-    priority_flag: str
-    airway_status: str | None = None
-    treatment_given: list[str] = Field(default_factory=list)
-    requested_supplies: list[str] = Field(default_factory=list)
-    evacuation_eta_hours: int | None = None
+    reported_at: datetime
+    seizure: bool
+    vomiting: bool
+    head_external_hemorrhage: bool
+    suspected_icp: bool
+    location: str | None = None
+    march_flags: list[str] = Field(default_factory=list)
     symptoms: list[str] = Field(default_factory=list)
     vitals: VitalSigns = Field(default_factory=VitalSigns)
-    risk_score: float | None = None
     notes: str | None = None
     source: SourceMetadata = Field(default_factory=SourceMetadata)
     extra: dict[str, Any] = Field(default_factory=dict)
@@ -163,11 +124,22 @@ class SupplyRule(BaseModel):
     """Clinician-authored rule that maps case conditions to a required supply item."""
 
     rule_id: str
-    symptom: str | None = None
-    min_risk_score: float | None = None
-    max_risk_score: float | None = None
-    min_evacuation_eta_hours: int | None = None
-    max_evacuation_eta_hours: int | None = None
+    min_gcs_total: int | None = None
+    max_gcs_total: int | None = None
+    seizure: bool | None = None
+    vomiting: bool | None = None
+    head_external_hemorrhage: bool | None = None
+    suspected_icp: bool | None = None
+    location_contains: str | None = None
+    required_march_flag: str | None = None
+    min_systolic_bp: int | None = None
+    max_systolic_bp: int | None = None
+    min_spo2: int | None = None
+    max_spo2: int | None = None
+    min_heart_rate: int | None = None
+    max_heart_rate: int | None = None
+    min_temp_c: float | None = None
+    max_temp_c: float | None = None
     item_id: str
     quantity: int = 1
     rationale: str
@@ -191,6 +163,9 @@ class SupplyNeed(BaseModel):
     name: str
     quantity: int
     unit_weight_lb: float
+    source_type: Literal["rule", "llm", "repaired_llm", "operator_override"] = "rule"
+    policy_refs: list[str] = Field(default_factory=list)
+    llm_confidence: float | None = None
     rationale: list[str] = Field(default_factory=list)
     source_rule_ids: list[str] = Field(default_factory=list)
 
@@ -226,6 +201,83 @@ class ExtractionResult(BaseModel):
     extracted_symptoms: list[str] = Field(default_factory=list)
     confidence: float = 0.0
     explanation: str = ""
+
+
+class WorkbookTriggerClause(BaseModel):
+    """One machine-readable condition compiled from the clinical workbook."""
+
+    field_name: str
+    operator: Literal["eq", "contains", "lte", "gte", "lt", "gt"]
+    value: str | int | float | bool
+
+
+class CompiledItemRule(BaseModel):
+    """Compiled workbook item trigger rule used by policy evaluation and LLM prompting."""
+
+    rule_id: str
+    item_id: str
+    item_name: str
+    default_quantity: int = 1
+    logic_type: str
+    priority_rank: int
+    clinical_rationale: str
+    trigger_text: str
+    any_clauses: list[WorkbookTriggerClause] = Field(default_factory=list)
+    all_clauses: list[WorkbookTriggerClause] = Field(default_factory=list)
+    unsupported_clauses: list[str] = Field(default_factory=list)
+
+
+class CompiledPriorityRank(BaseModel):
+    """Priority rank and notes for one supply item from the workbook."""
+
+    item_id: str
+    item_name: str
+    priority_rank: int
+    workbook_weight_lb: float | None = None
+    notes: str | None = None
+
+
+class CompiledClinicalWorkbook(BaseModel):
+    """Structured workbook snapshot compiled from the Excel clinical policy source."""
+
+    workbook_path: str
+    item_rules: list[CompiledItemRule] = Field(default_factory=list)
+    priority_ranks: dict[str, CompiledPriorityRank] = Field(default_factory=dict)
+
+
+class LLMRecommendedItem(BaseModel):
+    """One structured supply recommendation emitted by the LLM."""
+
+    item_id: str
+    quantity: int
+    rationale: str = ""
+    policy_refs: list[str] = Field(default_factory=list)
+    confidence: float | None = None
+
+    @field_validator("quantity")
+    @classmethod
+    def validate_quantity(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("quantity must be positive")
+        return value
+
+
+class LLMRecommendationResponse(BaseModel):
+    """Structured top-level LLM output used before deterministic validation and repair."""
+
+    recommended_items: list[LLMRecommendedItem] = Field(default_factory=list)
+    overall_confidence: float | None = None
+    manual_review_notes: str = ""
+
+
+class PolicyEvaluationResult(BaseModel):
+    """Deterministic workbook policy evaluation output for one canonical case."""
+
+    must_include_items: list[SupplyNeed] = Field(default_factory=list)
+    allowed_items: list[str] = Field(default_factory=list)
+    blocked_items: list[str] = Field(default_factory=list)
+    policy_matches: list[RuleMatch] = Field(default_factory=list)
+    priority_rank_map: dict[str, int] = Field(default_factory=dict)
 
 
 class ExportMetadata(BaseModel):

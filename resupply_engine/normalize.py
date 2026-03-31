@@ -1,83 +1,71 @@
 from __future__ import annotations
 
-from resupply_engine.models import CanonicalCase, TbiBurstPayload, VitalSigns
+from resupply_engine.models import CanonicalCase, SoftwareDecisionSupportPayload, VitalSigns
 
 
-def _canonicalize_symptom(symptom: str) -> str:
-    return symptom.strip().lower().replace(" ", "_").replace("-", "_")
+def _canonicalize_token(value: str) -> str:
+    return value.strip().lower().replace(" ", "_").replace("-", "_")
 
 
-def _fahrenheit_to_celsius(temperature_f: float | None) -> float | None:
-    if temperature_f is None:
-        return None
-    return round((temperature_f - 32) * 5 / 9, 2)
-
-
-def _derive_symptoms(payload: TbiBurstPayload) -> list[str]:
+def _derive_symptoms(payload: SoftwareDecisionSupportPayload) -> list[str]:
     symptoms: set[str] = set()
-    if payload.injury.tbi_severity in {"SEVERE", "PENETRATING"}:
+
+    if payload.gcs_total <= 8:
         symptoms.add("severe_tbi")
-    if payload.airway_status and payload.airway_status.strip().upper() == "COMPROMISED":
-        symptoms.add("airway_compromise")
-    if payload.neuro_exam is not None:
-        if payload.neuro_exam.seizure is True:
-            symptoms.add("seizure")
-        if payload.neuro_exam.vomiting is True:
-            symptoms.add("vomiting")
-        if payload.neuro_exam.suspected_icp == "YES":
-            symptoms.add("elevated_icp")
-        if payload.neuro_exam.pupil_response in {"UNEQUAL", "NON_REACTIVE"}:
-            symptoms.add("severe_tbi")
-        if payload.neuro_exam.gcs_total is not None and payload.neuro_exam.gcs_total <= 8:
-            symptoms.add("severe_tbi")
-        if payload.injury.hemorrhage == "YES":
+    if payload.seizure:
+        symptoms.add("seizure")
+    if payload.vomiting:
+        symptoms.add("vomiting")
+    if payload.head_external_hemorrhage:
+        symptoms.add("hemorrhage")
+    if payload.suspected_icp:
+        symptoms.add("elevated_icp")
+
+    for flag in payload.march_flags:
+        normalized = _canonicalize_token(flag)
+        if normalized == "airway_compromised":
+            symptoms.add("airway_compromise")
+        elif normalized == "massive_hemorrhage":
             symptoms.add("hemorrhage")
-    return sorted(_canonicalize_symptom(symptom) for symptom in symptoms)
+        else:
+            symptoms.add(normalized)
+
+    return sorted(symptoms)
 
 
-def _normalize_vitals(payload: TbiBurstPayload) -> VitalSigns:
-    neuro_exam = payload.neuro_exam
+def _normalize_vitals(payload: SoftwareDecisionSupportPayload) -> VitalSigns:
     return VitalSigns(
-        gcs=neuro_exam.gcs_total if neuro_exam is not None else None,
-        gcs_eye=neuro_exam.gcs_eye if neuro_exam is not None else None,
-        gcs_verbal=neuro_exam.gcs_verbal if neuro_exam is not None else None,
-        gcs_motor=neuro_exam.gcs_motor if neuro_exam is not None else None,
-        heart_rate=payload.vitals.heart_rate_bpm,
-        respiratory_rate=payload.vitals.respiratory_rate_rpm,
-        spo2=payload.vitals.spo2_pct,
-        systolic_bp=payload.vitals.blood_pressure_systolic,
-        diastolic_bp=payload.vitals.blood_pressure_diastolic,
-        temperature_c=_fahrenheit_to_celsius(payload.vitals.temperature_f),
+        gcs=payload.gcs_total,
+        gcs_eye=payload.gcs_eye,
+        gcs_verbal=payload.gcs_verbal,
+        gcs_motor=payload.gcs_motor,
+        heart_rate=payload.heart_rate,
+        spo2=payload.oxygen_saturation,
+        systolic_bp=payload.bp_systolic,
+        diastolic_bp=payload.bp_diastolic,
+        temperature_c=payload.temp_c,
     )
 
 
-def normalize_payload(payload: TbiBurstPayload) -> CanonicalCase:
-    normalized_symptoms = _derive_symptoms(payload)
+def normalize_payload(payload: SoftwareDecisionSupportPayload, burst_id: str) -> CanonicalCase:
     return CanonicalCase(
-        burst_id=payload.burst_id,
+        burst_id=burst_id,
         patient_id=payload.patient_id,
-        case_id=payload.case_id,
         mission_id=payload.mission_id,
         medic_id=payload.medic_id,
-        occurred_at=payload.timestamp_utc,
-        time_since_injury_min=payload.time_since_injury_min,
-        casualty_count=payload.casualty_count,
-        priority_flag=payload.priority_flag,
-        airway_status=payload.airway_status,
-        treatment_given=payload.treatment_given,
-        requested_supplies=payload.requested_supplies,
-        evacuation_eta_hours=payload.evacuation_eta_hours,
-        symptoms=normalized_symptoms,
+        reported_at=payload.timestamp,
+        seizure=payload.seizure,
+        vomiting=payload.vomiting,
+        head_external_hemorrhage=payload.head_external_hemorrhage,
+        suspected_icp=payload.suspected_icp,
+        location=payload.location.strip() if payload.location else None,
+        march_flags=payload.march_flags,
+        symptoms=_derive_symptoms(payload),
         vitals=_normalize_vitals(payload),
-        risk_score=payload.risk_score,
         notes=payload.notes.strip() if payload.notes else None,
         source=payload.source,
         extra={
             **payload.extra,
-            "raw_assessment": {
-                "vitals": payload.vitals.model_dump(mode="json"),
-                "neuro_exam": payload.neuro_exam.model_dump(mode="json") if payload.neuro_exam else None,
-                "injury": payload.injury.model_dump(mode="json"),
-            },
+            "raw_assessment": payload.model_dump(mode="json", exclude={"source", "extra"}),
         },
     )

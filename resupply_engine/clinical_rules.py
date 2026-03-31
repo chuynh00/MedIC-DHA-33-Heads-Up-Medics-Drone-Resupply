@@ -16,13 +16,12 @@ class ClinicalRuleEngine:
             lambda: {"quantity": 0, "rationale": [], "source_rule_ids": []}
         )
 
-        case_symptoms = set(case.symptoms)
         for rule in self.rules:
-            if not self._rule_matches(rule, case, case_symptoms):
+            triggered_by = self._triggered_by(rule, case)
+            if triggered_by is None:
                 continue
 
             catalog_item = self.catalog[rule.item_id]
-            triggered_by = [token for token in [rule.symptom, self._risk_trigger(rule, case), self._eta_trigger(rule, case)] if token]
             matches.append(
                 RuleMatch(
                     rule_id=rule.rule_id,
@@ -57,36 +56,59 @@ class ClinicalRuleEngine:
         needs.sort(key=lambda need: (need.name, need.item_id))
         return matches, needs
 
-    @staticmethod
-    def _rule_matches(rule: SupplyRule, case: CanonicalCase, case_symptoms: set[str]) -> bool:
-        if rule.symptom and rule.symptom not in case_symptoms:
-            return False
-        if rule.min_risk_score is not None and (case.risk_score is None or case.risk_score < rule.min_risk_score):
-            return False
-        if rule.max_risk_score is not None and (case.risk_score is None or case.risk_score > rule.max_risk_score):
-            return False
-        if rule.min_evacuation_eta_hours is not None and (
-            case.evacuation_eta_hours is None or case.evacuation_eta_hours < rule.min_evacuation_eta_hours
-        ):
-            return False
-        if rule.max_evacuation_eta_hours is not None and (
-            case.evacuation_eta_hours is None or case.evacuation_eta_hours > rule.max_evacuation_eta_hours
-        ):
-            return False
-        return True
+    @classmethod
+    def _triggered_by(cls, rule: SupplyRule, case: CanonicalCase) -> list[str] | None:
+        triggered_by: list[str] = []
 
-    @staticmethod
-    def _risk_trigger(rule: SupplyRule, case: CanonicalCase) -> str | None:
-        if case.risk_score is None:
-            return None
-        if rule.min_risk_score is not None or rule.max_risk_score is not None:
-            return f"risk_score={case.risk_score}"
-        return None
+        if rule.min_gcs_total is not None:
+            if case.vitals.gcs is None or case.vitals.gcs < rule.min_gcs_total:
+                return None
+            triggered_by.append(f"gcs_total={case.vitals.gcs}")
 
-    @staticmethod
-    def _eta_trigger(rule: SupplyRule, case: CanonicalCase) -> str | None:
-        if case.evacuation_eta_hours is None:
-            return None
-        if rule.min_evacuation_eta_hours is not None or rule.max_evacuation_eta_hours is not None:
-            return f"evac_eta_hours={case.evacuation_eta_hours}"
-        return None
+        if rule.max_gcs_total is not None:
+            if case.vitals.gcs is None or case.vitals.gcs > rule.max_gcs_total:
+                return None
+            if f"gcs_total={case.vitals.gcs}" not in triggered_by:
+                triggered_by.append(f"gcs_total={case.vitals.gcs}")
+
+        for field_name in ("seizure", "vomiting", "head_external_hemorrhage", "suspected_icp"):
+            rule_value = getattr(rule, field_name)
+            if rule_value is None:
+                continue
+            case_value = getattr(case, field_name)
+            if case_value is not rule_value:
+                return None
+            triggered_by.append(f"{field_name}={str(case_value).lower()}")
+
+        if rule.location_contains is not None:
+            location = (case.location or "").lower()
+            required = rule.location_contains.lower()
+            if required not in location:
+                return None
+            triggered_by.append(f"location~{rule.location_contains}")
+
+        if rule.required_march_flag is not None:
+            if rule.required_march_flag not in set(case.march_flags):
+                return None
+            triggered_by.append(f"march_flag={rule.required_march_flag}")
+
+        numeric_checks = (
+            ("min_systolic_bp", "max_systolic_bp", case.vitals.systolic_bp, "systolic_bp"),
+            ("min_spo2", "max_spo2", case.vitals.spo2, "spo2"),
+            ("min_heart_rate", "max_heart_rate", case.vitals.heart_rate, "heart_rate"),
+            ("min_temp_c", "max_temp_c", case.vitals.temperature_c, "temp_c"),
+        )
+        for min_field, max_field, case_value, label in numeric_checks:
+            min_rule = getattr(rule, min_field)
+            max_rule = getattr(rule, max_field)
+            if min_rule is None and max_rule is None:
+                continue
+            if case_value is None:
+                return None
+            if min_rule is not None and case_value < min_rule:
+                return None
+            if max_rule is not None and case_value > max_rule:
+                return None
+            triggered_by.append(f"{label}={case_value}")
+
+        return triggered_by

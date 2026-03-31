@@ -1,0 +1,42 @@
+MEDIC DRONE RESUPPLY DISPATCH BRIEF
+
+Patient ID: PT-2847
+Mission ID: MSN-0042
+Medic ID: PJ-14
+This plan is the response to burst ID: BST-20340316-0001
+Burst timestamp_utc: 2034-03-16T14:23:00+00:00
+GCS Total: 7
+MARCH Flags: airway_compromised, circulatory_compromise
+Direct Findings: seizure=false, vomiting=true, head_external_hemorrhage=true, suspected_icp=true, location=FRONT-LEFT
+Shootdown rate: 25%
+Target arrival probability: 95.00%
+
+Required Supplies:
+- 1x Hemostatic Dressing Bundle (1.5 lb each)
+- 1x Fresh Whole Blood (10.0 lb each)
+- 1x Airway Support Kit (3.5 lb each)
+- 1x Hypertonic Saline Kit (5.0 lb each)
+- 1x IV Fluid Bundle (8.0 lb each)
+- 1x Infrared Intracranial Hemorrhage Kit (7.0 lb each)
+- 1x TBI Detection/Monitoring Kit (4.0 lb each)
+- 1x Ketamine Analgesia Kit (3.5 lb each)
+
+Base Manifest:
+- Drone 1: 10.0 lb | 1x Fresh Whole Blood
+- Drone 2: 9.5 lb | 1x Hemostatic Dressing Bundle, 1x IV Fluid Bundle
+- Drone 3: 7.0 lb | 1x Infrared Intracranial Hemorrhage Kit
+- Drone 4: 9.0 lb | 1x Hypertonic Saline Kit, 1x TBI Detection/Monitoring Kit
+- Drone 5: 7.0 lb | 1x Airway Support Kit, 1x Ketamine Analgesia Kit
+
+Redundancy multiplier: 3
+Per item arrival probability: 98.44%
+Total drones to be sent: 15
+
+Review Flags:
+- [WARNING] Free-text note did not map cleanly to the bounded symptom schema.
+- [WARNING] Added mandatory workbook item hemostatic_dressing_bundle after LLM omission.
+- [WARNING] Added mandatory workbook item airway_support_kit after LLM omission.
+- [WARNING] Added mandatory workbook item hypertonic_saline_kit after LLM omission.
+- [WARNING] Added mandatory workbook item iv_fluid_bundle after LLM omission.
+- [WARNING] Added mandatory workbook item infrared_intracranial_hemorrhage_device after LLM omission.
+- [WARNING] Added mandatory workbook item ketamine_analgesia_kit after LLM omission.

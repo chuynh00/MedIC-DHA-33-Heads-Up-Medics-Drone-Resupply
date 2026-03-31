@@ -1,5 +1,5 @@
 item_id,name,unit_weight_lb,unit_of_issue,is_bundle,notes
-tbi_monitoring_kit,TBI Monitoring Kit,4.0,kit,true,Neuro monitoring and observation aids
+tbi_detection_monitoring_kit,TBI Detection/Monitoring Kit,4.0,kit,true,Neuro monitoring and observation aids. Includes portable tools for detecting ICH and monitoring GCS and neurological status in patients with suspected TBI.
 airway_support_kit,Airway Support Kit,3.5,kit,true,Airway adjuncts and support tools
 iv_fluid_bundle,IV Fluid Bundle,8.0,bundle,true,Fluids for delayed evacuation support
 hemostatic_dressing_bundle,Hemostatic Dressing Bundle,1.5,bundle,true,Hemorrhage control dressing set
@@ -9,4 +9,4 @@ auto_burr_hole_device,Auto Burr Hole Kit,10.0,device,true,For suspected elevated
 fresh_whole_blood,Fresh Whole Blood,10.0,unit,false,For hemorrhagic shock resuscitation
 pentobarbital_sedation_kit,Pentobarbital Sedation Kit,4.5,kit,true,For seizure control and sedation in high-risk patients and to reduce metabolic rate
 benzodiazepine_sedation_kit,Benzodiazepine Sedation Kit,3.0,kit,true,For seizure control and sedation in high-risk patients
-ketamine_analgesia_kit,Ketamine Analgesia Kit,3.5,kit,true,For analgesia support in high-risk trauma patients and to reduce cortical spreading depolarizations
+ketamine_analgesia_kit,Ketamine Analgesia Kit,3.5,kit,true,For analgesia support in high-risk trauma patients and to reduce cortical spreading depolarization

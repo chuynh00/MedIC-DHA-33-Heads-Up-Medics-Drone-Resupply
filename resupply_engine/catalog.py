@@ -10,6 +10,13 @@ def _parse_bool(value: str) -> bool:
     return value.strip().lower() in {"true", "1", "yes", "y"}
 
 
+def _parse_optional_bool(value: str) -> bool | None:
+    value = value.strip()
+    if not value:
+        return None
+    return _parse_bool(value)
+
+
 def _parse_optional_float(value: str) -> float | None:
     value = value.strip()
     return float(value) if value else None
@@ -45,11 +52,22 @@ def load_supply_rules(path: Path) -> list[SupplyRule]:
             rules.append(
                 SupplyRule(
                     rule_id=row["rule_id"].strip(),
-                    symptom=row.get("symptom", "").strip() or None,
-                    min_risk_score=_parse_optional_float(row.get("min_risk_score", "")),
-                    max_risk_score=_parse_optional_float(row.get("max_risk_score", "")),
-                    min_evacuation_eta_hours=_parse_optional_int(row.get("min_evacuation_eta_hours", "")),
-                    max_evacuation_eta_hours=_parse_optional_int(row.get("max_evacuation_eta_hours", "")),
+                    min_gcs_total=_parse_optional_int(row.get("min_gcs_total", "")),
+                    max_gcs_total=_parse_optional_int(row.get("max_gcs_total", "")),
+                    seizure=_parse_optional_bool(row.get("seizure", "")),
+                    vomiting=_parse_optional_bool(row.get("vomiting", "")),
+                    head_external_hemorrhage=_parse_optional_bool(row.get("head_external_hemorrhage", "")),
+                    suspected_icp=_parse_optional_bool(row.get("suspected_icp", "")),
+                    location_contains=row.get("location_contains", "").strip() or None,
+                    required_march_flag=row.get("required_march_flag", "").strip().lower().replace("-", "_").replace(" ", "_") or None,
+                    min_systolic_bp=_parse_optional_int(row.get("min_systolic_bp", "")),
+                    max_systolic_bp=_parse_optional_int(row.get("max_systolic_bp", "")),
+                    min_spo2=_parse_optional_int(row.get("min_spo2", "")),
+                    max_spo2=_parse_optional_int(row.get("max_spo2", "")),
+                    min_heart_rate=_parse_optional_int(row.get("min_heart_rate", "")),
+                    max_heart_rate=_parse_optional_int(row.get("max_heart_rate", "")),
+                    min_temp_c=_parse_optional_float(row.get("min_temp_c", "")),
+                    max_temp_c=_parse_optional_float(row.get("max_temp_c", "")),
                     item_id=row["item_id"].strip(),
                     quantity=int(row.get("quantity", "1")),
                     rationale=row["rationale"].strip(),
