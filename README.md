@@ -2,7 +2,7 @@
 
 This repository contains a local-first Python backend for planning medical drone resupply missions for combat medics treating traumatic brain injury patients in contested environments.
 
-The service accepts a simplified medic-system patient payload, normalizes the incoming assessment, evaluates a clinical workbook policy, optionally runs a local Hugging Face recommender, packs the resulting supplies into 10 lb drone manifests, applies redundancy based on drone shootdown risk, and returns a dispatch plan that an operator can review.
+The service accepts a simplified medic-system patient payload, normalizes the incoming assessment, evaluates a clinical workbook policy, optionally runs a local LLM recommender through Ollama or Hugging Face, packs the resulting supplies into 10 lb drone manifests, applies redundancy based on drone shootdown risk, and returns a dispatch plan that an operator can review.
 
 ## What The Codebase Does
 
@@ -10,7 +10,7 @@ The service accepts a simplified medic-system patient payload, normalizes the in
 - Preserves the external payload structure while normalizing it into an internal case model.
 - Evaluates workbook-authored clinical policy from structured fields such as GCS, suspected ICP, external hemorrhage, and MARCH flags.
 - Uses the local supply catalog plus the clinical workbook [data/TBI_Clinical_Rules.xlsx](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/data/TBI_Clinical_Rules.xlsx) as the recommendation source of truth.
-- Supports an optional local-only Hugging Face recommender layer, with deterministic validation and fallback if the model is unavailable.
+- Supports an optional local-only LLM recommender layer through Ollama or Hugging Face, with deterministic validation and fallback if the model is unavailable.
 - Builds a required supply list from matching rules.
 - Packs supplies into base drone manifests without exceeding the per-drone payload limit.
 - Calculates how many replicated drone sets to send based on shootdown rate and target arrival confidence.
@@ -30,7 +30,7 @@ The service accepts a simplified medic-system patient payload, normalizes the in
 - [resupply_engine/workbook_policy.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/workbook_policy.py)
   Workbook compiler and deterministic policy evaluator for clinical item selection.
 - [resupply_engine/llm_recommender.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/llm_recommender.py)
-  Optional local-only Hugging Face recommender adapter and structured output parser.
+  Optional local-only Ollama and Hugging Face recommender adapters plus structured output parser.
 - [resupply_engine/packing.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/packing.py)
   Packing logic that assigns supplies to base drone manifests under the payload limit.
 - [resupply_engine/redundancy.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/redundancy.py)
@@ -94,11 +94,86 @@ To enable the optional local Hugging Face recommender layer, install the extra t
 pip install -e ".[dev,llm]"
 ```
 
+If you plan to use Ollama only, the base project dependencies are enough because the Ollama backend talks to the local Ollama HTTP API directly.
+
 If you prefer not to use editable installs, this also works:
 
 ```bash
 pip install fastapi uvicorn pydantic pytest httpx
 ```
+
+## Optional Ollama Setup
+
+The current codebase defaults to `llm_backend="ollama"` when `llm_enabled=True`.
+
+1. Install Ollama on your machine.
+
+On macOS, use the official download:
+
+- Ollama download: https://ollama.com/download/mac
+
+2. Start the local Ollama service.
+
+If the desktop app is installed, launching it usually starts the local service. You can also run:
+
+```bash
+ollama serve
+```
+
+3. Pull a model locally.
+
+For this project, a good first model is:
+
+```bash
+ollama pull qwen2.5:1.5b
+```
+
+If your machine can handle a larger model, you can also try:
+
+```bash
+ollama pull qwen2.5:3b
+```
+
+4. Verify that Ollama is responding:
+
+```bash
+curl http://127.0.0.1:11434/api/generate -d '{
+  "model": "qwen2.5:1.5b",
+  "prompt": "Return only JSON: {\"ok\": true}",
+  "stream": false
+}'
+```
+
+5. Configure the planner to use Ollama.
+
+The relevant settings in [config.py](/Users/chelseahuynh/MedIC-DHA-33-Heads-Up-Medics-Drone-Resupply/resupply_engine/config.py) are:
+
+- `llm_enabled=True`
+- `llm_backend="ollama"`
+- `ollama_base_url="http://127.0.0.1:11434/api"`
+- `ollama_model="qwen2.5:1.5b"`
+
+With that configuration, the planner sends the `CanonicalCase`, supply catalog, and compiled clinical workbook to the local Ollama server and expects structured JSON supply recommendations back.
+
+## Optional Hugging Face Setup
+
+If you prefer not to run Ollama, the project can also load a local Hugging Face Transformers model directory directly from Python.
+
+1. Install the extra dependencies:
+
+```bash
+pip install -e ".[dev,llm]"
+```
+
+2. Download a compatible local model directory.
+
+3. Configure:
+
+- `llm_enabled=True`
+- `llm_backend="huggingface"`
+- `llm_model_path=<path to the downloaded model directory>`
+
+Hugging Face mode loads model files directly into the Python process. Ollama mode talks to a separate local model server.
 
 ## Run Locally
 
@@ -175,6 +250,7 @@ python3 -m compileall resupply_engine tests backend.py
 ## Notes
 
 - The current recommendation engine is workbook-driven with an optional local LLM layer.
+- Ollama is now the default LLM backend path when local LLMs are enabled.
 - The free-text extractor is only a bounded helper for symptom extraction; it does not replace clinician-authored rules.
 - Packing and redundancy remain deterministic even when the local LLM recommender is enabled.
 - The medic payload is field-only; planning knobs like `shootdown_rate` stay at the top level of the API request.
