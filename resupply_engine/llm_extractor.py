@@ -14,6 +14,13 @@ KEYWORD_TO_SYMPTOM = {
     "anisocoria": "severe_tbi",
     "brain swelling": "elevated_icp",
     "unequal pupils": "severe_tbi",
+    "unresponsive": "severe_tbi",
+    "unconscious": "severe_tbi",
+    "vomit": "vomiting",
+    "nausea": "vomiting",
+    "dizzy": "elevated_icp",
+    "dizziness": "elevated_icp",
+    "lightheaded": "elevated_icp",
 }
 
 

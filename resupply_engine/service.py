@@ -49,7 +49,11 @@ class DispatchPlanningService:
         # same local clinical snapshot.
         self.settings = settings
         self.catalog = load_supply_catalog(settings.data_dir / "supply_catalog.csv")
-        self.workbook = compile_clinical_workbook(settings.clinical_workbook_path, self.catalog)
+        self.workbook = compile_clinical_workbook(
+            settings.clinical_workbook_path,
+            self.catalog,
+            supply_rules_path=settings.data_dir / "supply_rules.csv",
+        )
         self.store = store or SQLitePlanStore(settings.db_path)
         self.text_exporter = OperatorTextExporter(settings.exports_dir)
         self.recommender = recommender or self._build_recommender()

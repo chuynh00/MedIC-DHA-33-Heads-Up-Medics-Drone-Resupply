@@ -196,7 +196,7 @@ def build_llm_prompt(
             for item_id, rank in workbook.priority_ranks.items()
         },
         "instructions": {
-            "task": ["You are a medical supply recommendation system, specifically designed to recommend what supplies to send for casualties with traumatic brain injuries. "
+            "task": ["You are a medical supply recommendation system, specifically designed to recommend what supplies to send for military casualties with traumatic brain injuries in austere and contested environments. "
             "Analyze the provided case and recommend the appropriate supplies."],
             
             "constraints": [

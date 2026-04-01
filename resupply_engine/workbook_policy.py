@@ -27,15 +27,20 @@ class WorkbookPolicyError(ValueError):
     pass
 
 
-def compile_clinical_workbook(path: Path, catalog: dict[str, SupplyCatalogItem]) -> CompiledClinicalWorkbook:
+def compile_clinical_workbook(
+    path: Path,
+    catalog: dict[str, SupplyCatalogItem],
+    supply_rules_path: Path | None = None,
+) -> CompiledClinicalWorkbook:
     workbook_rows = _read_workbook_rows(path)
     if "Item Trigger Rules" not in workbook_rows:
         raise WorkbookPolicyError("Workbook is missing required sheet: Item Trigger Rules")
-    if "Priority Ranking & Weight" not in workbook_rows:
-        raise WorkbookPolicyError("Workbook is missing required sheet: Priority Ranking & Weight")
+    if "Priority Ranking and Weight" not in workbook_rows:
+        raise WorkbookPolicyError("Workbook is missing required sheet: Priority Ranking and Weight")
 
-    priority_ranks = _compile_priority_sheet(workbook_rows["Priority Ranking & Weight"], catalog)
-    item_rules = _compile_item_rules_sheet(workbook_rows["Item Trigger Rules"], catalog, priority_ranks)
+    csv_quantities = _load_csv_quantities(supply_rules_path) if supply_rules_path else {}
+    priority_ranks = _compile_priority_sheet(workbook_rows["Priority Ranking and Weight"], catalog)
+    item_rules = _compile_item_rules_sheet(workbook_rows["Item Trigger Rules"], catalog, priority_ranks, csv_quantities)
     return CompiledClinicalWorkbook(
         workbook_path=str(path),
         item_rules=item_rules,
@@ -132,7 +137,7 @@ def _read_workbook_rows(path: Path) -> dict[str, list[list[str]]]:
 
         sheet_rows: dict[str, list[list[str]]] = {}
         for sheet in workbook.find("x:sheets", ns):
-            sheet_name = unescape(sheet.attrib["name"])
+            sheet_name = _canonical_sheet_name(sheet.attrib["name"])
             target = rel_map[sheet.attrib["{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"]]
             root = ET.fromstring(workbook_zip.read(f"xl/{target}"))
             rows = root.find("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}sheetData")
@@ -188,10 +193,23 @@ def _compile_priority_sheet(
     return compiled
 
 
+def _load_csv_quantities(path: Path) -> dict[str, int]:
+    """Return a mapping of item_id -> max quantity from supply_rules.csv."""
+    import csv
+    quantities: dict[str, int] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            item_id = row["item_id"].strip()
+            qty = int(row.get("quantity", "1"))
+            quantities[item_id] = max(quantities.get(item_id, 0), qty)
+    return quantities
+
+
 def _compile_item_rules_sheet(
     rows: list[list[str]],
     catalog: dict[str, SupplyCatalogItem],
     priority_ranks: dict[str, CompiledPriorityRank],
+    csv_quantities: dict[str, int] | None = None,
 ) -> list[CompiledItemRule]:
     compiled: list[CompiledItemRule] = []
     for index, row in enumerate(rows[3:], start=1):
@@ -203,12 +221,13 @@ def _compile_item_rules_sheet(
         logic_type = row[5].strip() or "ANY (OR)"
         any_clauses, all_clauses, unsupported_clauses = _compile_trigger_expression(row[4], logic_type)
         priority_rank = int(float(row[7])) if row[7].strip() else priority_ranks.get(item_id, CompiledPriorityRank(item_id=item_id, item_name=row[1].strip(), priority_rank=999)).priority_rank
+        default_quantity = (csv_quantities or {}).get(item_id, 1)
         compiled.append(
             CompiledItemRule(
                 rule_id=f"workbook-rule-{index}-{item_id}",
                 item_id=item_id,
                 item_name=row[1].strip(),
-                default_quantity=1,
+                default_quantity=default_quantity,
                 logic_type=logic_type,
                 priority_rank=priority_rank,
                 clinical_rationale=row[6].strip(),
@@ -352,6 +371,20 @@ def _get_case_value(case: CanonicalCase, field_name: str) -> Any:
 
 def _canonical_item_id(item_id: str) -> str:
     return item_id.strip()
+
+
+def _canonical_sheet_name(sheet_name: str) -> str:
+    normalized = sheet_name
+    while True:
+        unescaped = unescape(normalized)
+        if unescaped == normalized:
+            break
+        normalized = unescaped
+
+    normalized = normalized.strip()
+    if normalized == "Priority Ranking & Weight":
+        return "Priority Ranking and Weight"
+    return normalized
 
 
 def _canonical_flag(flag: str) -> str:

@@ -288,8 +288,8 @@ def test_example_and_incoming_payload_files_validate() -> None:
 
     planning_request = json.loads((base_dir / "example_payload.json").read_text())
     validated_request = PlanningRequest.model_validate(planning_request)
-    assert validated_request.burst_id == "BST-20340316-0001"
-    assert validated_request.software_decision_support_payload.patient_id == "PT-2847"
+    assert validated_request.burst_id == "BST-20340401-0002"
+    assert validated_request.software_decision_support_payload.patient_id == "PT-9990"
 
 
 def test_normalization_maps_flat_payload_and_preserves_context() -> None:

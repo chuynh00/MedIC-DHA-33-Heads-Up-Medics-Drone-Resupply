@@ -20,6 +20,8 @@ def _derive_symptoms(payload: SoftwareDecisionSupportPayload) -> list[str]:
         symptoms.add("hemorrhage")
     if payload.suspected_icp:
         symptoms.add("elevated_icp")
+    if payload.temp_c <= 35.0:
+        symptoms.add("hypothermia")
 
     for flag in payload.march_flags:
         normalized = _canonicalize_token(flag)
