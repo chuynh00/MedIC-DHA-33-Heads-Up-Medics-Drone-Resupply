@@ -14,7 +14,7 @@ class Settings:
     default_target_arrival_probability: float = 0.95
     max_total_drones: int = 24
     llm_extraction_confidence_threshold: float = 0.65
-    llm_enabled: bool = False
+    llm_enabled: bool = True
     llm_backend: str = "ollama"
     llm_model_path: Path | None = None
     ollama_base_url: str = "http://127.0.0.1:11434/api"
